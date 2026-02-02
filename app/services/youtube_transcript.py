@@ -55,5 +55,6 @@ def get_transcript(video_input: str, *, languages: list[str] | None = None) -> s
 
 
 if __name__ == "__main__":
-    transcript = get_transcript("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    # transcript = get_transcript("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    transcript = get_transcript("hoxkVNtY3c0")
     print(transcript)

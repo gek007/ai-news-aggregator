@@ -3,8 +3,7 @@
 import feedparser
 import logging
 from datetime import datetime
-from typing import List, Dict, Optional
-from urllib.parse import urlparse, parse_qs
+from typing import List, Dict
 
 from app.scrapers.base import BaseScraper
 
@@ -63,8 +62,6 @@ class YouTubeRSSScraper(BaseScraper):
                         "url": entry.get("link", ""),
                         "published_at": published_at,
                         "description": entry.get("summary", ""),
-                        "channel_id": self._extract_channel_id(rss_url),
-                        "video_id": self._extract_video_id(entry.get("link", "")),
                     }
                     videos.append(video)
                 except Exception as e:
@@ -76,29 +73,6 @@ class YouTubeRSSScraper(BaseScraper):
         except Exception as e:
             logger.error(f"Error fetching RSS feed {rss_url}: {e}")
             return []
-
-    def _extract_channel_id(self, rss_url: str) -> Optional[str]:
-        """Extract channel ID from RSS URL"""
-        try:
-            parsed = urlparse(rss_url)
-            params = parse_qs(parsed.query)
-            return params.get("channel_id", [None])[0]
-        except Exception:
-            return None
-
-    def _extract_video_id(self, video_url: str) -> Optional[str]:
-        """Extract video ID from YouTube URL"""
-        try:
-            parsed = urlparse(video_url)
-            if parsed.hostname in ["www.youtube.com", "youtube.com", "youtu.be"]:
-                if "watch" in parsed.path:
-                    params = parse_qs(parsed.query)
-                    return params.get("v", [None])[0]
-                elif parsed.hostname == "youtu.be":
-                    return parsed.path.lstrip("/")
-        except Exception:
-            return None
-        return None
 
     def fetch_latest(self, channel_ids: List[str], hours: int = 24) -> List[Dict]:
         """

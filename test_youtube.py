@@ -42,8 +42,6 @@ def main():
             print(f"{i}. {video['title']}")
             print(f"   URL: {video['url']}")
             print(f"   Published: {video['published_at']}")
-            print(f"   Channel ID: {video.get('channel_id', 'N/A')}")
-            print(f"   Video ID: {video.get('video_id', 'N/A')}")
             if video.get("description"):
                 desc = (
                     video["description"][:100] + "..."

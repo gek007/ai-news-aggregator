@@ -2,6 +2,7 @@
 
 import feedparser
 import logging
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import List, Optional
 
@@ -9,6 +10,7 @@ import trafilatura
 from pydantic import BaseModel
 
 from app.scrapers.base import BaseScraper
+from app.services.xml_to_markdown import xml_to_markdown as _xml_to_markdown
 
 logger = logging.getLogger(__name__)
 
@@ -107,27 +109,52 @@ class OpenAINewsScraper(BaseScraper):
         )
         return filtered_articles
 
-    def url_to_markdown(self, url: str, *, timeout: int = 10) -> str:
+    def xml_to_markdown(
+        self,
+        xml_content: str,
+        *,
+        root_title: Optional[str] = None,
+        max_heading_level: int = 6,
+    ) -> str:
         """
-        Fetch a URL and convert its main content to markdown using trafilatura.
+        Convert XML string to a human-readable markdown representation.
 
-        Args:
-            url: The URL to fetch.
-            timeout: Request timeout in seconds (default: 10).
-
-        Returns:
-            The page content as a markdown string.
-
-        Raises:
-            ValueError: If the URL could not be fetched or no content extracted.
+        Delegates to the shared app.services.xml_to_markdown converter.
         """
-        downloaded = trafilatura.fetch_url(url, config=trafilatura.settings.use_fast())
+        return _xml_to_markdown(
+            xml_content,
+            root_title=root_title,
+            max_heading_level=max_heading_level,
+        )
+
+    def url_to_markdown(
+        self,
+        url: str,
+        *,
+        timeout: int = 10,
+        root_title: Optional[str] = None,
+        max_heading_level: int = 6,
+    ) -> str:
+        """
+        Fetch a URL and convert its content to markdown.
+
+        Uses trafilatura first; if no main content (e.g. XML/RSS), falls back
+        to the same xml_to_markdown converter as AnthropicNewsScraper.
+        """
+        downloaded = trafilatura.fetch_url(url)
         if not downloaded:
             raise ValueError(f"Could not fetch URL: {url}")
         markdown = trafilatura.extract(downloaded, output_format="markdown")
-        if not markdown:
-            raise ValueError(f"No main content extracted from: {url}")
-        return markdown
+        if markdown:
+            return markdown
+        try:
+            return self.xml_to_markdown(
+                downloaded,
+                root_title=root_title,
+                max_heading_level=max_heading_level,
+            )
+        except ET.ParseError:
+            return downloaded
 
 
 if __name__ == "__main__":

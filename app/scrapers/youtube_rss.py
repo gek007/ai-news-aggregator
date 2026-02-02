@@ -181,7 +181,7 @@ if __name__ == "__main__":
     scraper = YouTubeRSSScraper()
     videos = scraper.fetch_latest(["UCc-FovAyBAQDw2Y7PQ_v0Zw"], hours=24)
     for video in videos:
-        print("--------------------------------")
+        print("------------")
         print("title: ", video.title)
         print("url: ", video.url)
         print("published_at: ", video.published_at)

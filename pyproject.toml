@@ -26,4 +26,4 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["app", "app.scrapers", "app.services"]
+packages = ["app", "app.database", "app.scrapers", "app.services"]

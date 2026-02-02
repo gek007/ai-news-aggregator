@@ -23,6 +23,7 @@ class ChannelVideo(BaseModel):
     published_at: Optional[datetime] = None
     description: str
     video_id: Optional[str] = None
+    channel_id: Optional[str] = None
 
 
 class Transcript(BaseModel):
@@ -163,7 +164,8 @@ class YouTubeRSSScraper(BaseScraper):
             logger.info(f"Fetching videos from channel {channel_id}")
 
             videos = self.parse_rss_feed(rss_url)
-            all_videos.extend(videos)
+            for v in videos:
+                all_videos.append(ChannelVideo(**v.model_dump(), channel_id=channel_id))
 
         # Filter by timeframe (base expects list of dicts)
         dicts = [v.model_dump(mode="python") for v in all_videos]

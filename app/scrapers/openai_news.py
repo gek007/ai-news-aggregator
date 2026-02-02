@@ -5,8 +5,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-import requests
-from markdownify import markdownify as md
+import trafilatura
 from pydantic import BaseModel
 
 from app.scrapers.base import BaseScraper
@@ -14,16 +13,6 @@ from app.scrapers.base import BaseScraper
 logger = logging.getLogger(__name__)
 
 OPENAI_NEWS_RSS_URL = "https://openai.com/news/rss.xml"
-
-# Browser-like headers to avoid 403 Forbidden from sites that block scrapers
-DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-}
 
 
 class OpenAINewsArticle(BaseModel):
@@ -118,34 +107,27 @@ class OpenAINewsScraper(BaseScraper):
         )
         return filtered_articles
 
-    def url_to_markdown(
-        self,
-        url: str,
-        *,
-        timeout: int = 10,
-        **markdownify_options,
-    ) -> str:
+    def url_to_markdown(self, url: str, *, timeout: int = 10) -> str:
         """
-        Fetch a URL's HTML and convert it to markdown.
+        Fetch a URL and convert its main content to markdown using trafilatura.
 
         Args:
             url: The URL to fetch.
             timeout: Request timeout in seconds (default: 10).
-            **markdownify_options: Optional kwargs passed to markdownify.
 
         Returns:
             The page content as a markdown string.
 
         Raises:
-            requests.RequestException: On fetch errors.
+            ValueError: If the URL could not be fetched or no content extracted.
         """
-        response = requests.get(
-            url,
-            timeout=timeout,
-            headers=DEFAULT_HEADERS,
-        )
-        response.raise_for_status()
-        return md(response.text, **markdownify_options)
+        downloaded = trafilatura.fetch_url(url, config=trafilatura.settings.use_fast())
+        if not downloaded:
+            raise ValueError(f"Could not fetch URL: {url}")
+        markdown = trafilatura.extract(downloaded, output_format="markdown")
+        if not markdown:
+            raise ValueError(f"No main content extracted from: {url}")
+        return markdown
 
 
 if __name__ == "__main__":
@@ -159,4 +141,4 @@ if __name__ == "__main__":
     #     print("category:", a.category)
     #     print("description:", (a.description or "")[:120], "...")
     markdown = scraper.url_to_markdown("https://openai.com/news/")
-    print(md(markdown))
+    print(markdown)

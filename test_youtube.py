@@ -39,14 +39,14 @@ def main():
     if videos:
         print(f"\nFound {len(videos)} video(s) in the last 24 hours:\n")
         for i, video in enumerate(videos, 1):
-            print(f"{i}. {video['title']}")
-            print(f"   URL: {video['url']}")
-            print(f"   Published: {video['published_at']}")
-            if video.get("description"):
+            print(f"{i}. {video.title}")
+            print(f"   URL: {video.url}")
+            print(f"   Published: {video.published_at}")
+            if video.description:
                 desc = (
-                    video["description"][:100] + "..."
-                    if len(video["description"]) > 100
-                    else video["description"]
+                    video.description[:100] + "..."
+                    if len(video.description) > 100
+                    else video.description
                 )
                 print(f"   Description: {desc}")
             print()
@@ -62,9 +62,9 @@ def main():
         if all_videos:
             print(f"\nFound {len(all_videos)} total recent video(s):\n")
             for i, video in enumerate(all_videos[:5], 1):  # Show first 5
-                print(f"{i}. {video['title']}")
-                print(f"   URL: {video['url']}")
-                print(f"   Published: {video['published_at']}")
+                print(f"{i}. {video.title}")
+                print(f"   URL: {video.url}")
+                print(f"   Published: {video.published_at}")
                 print()
         else:
             print("\nNo videos found. Please check:")

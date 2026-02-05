@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Environment (keep secrets out of repo)
+.env

@@ -1,4 +1,4 @@
-"""OpenAI news RSS feed scraper."""
+"""Anthropic news RSS feed scraper (news, engineering, research feeds combined)."""
 
 import feedparser
 import logging
@@ -14,37 +14,55 @@ from app.services.xml_to_markdown import xml_to_markdown as _xml_to_markdown
 
 logger = logging.getLogger(__name__)
 
-OPENAI_NEWS_RSS_URL = "https://openai.com/news/rss.xml"
+ANTHROPIC_RSS_FEEDS = [
+    (
+        "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
+        "news",
+    ),
+    (
+        "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml",
+        "engineering",
+    ),
+    (
+        "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_research.xml",
+        "research",
+    ),
+]
 
 
-class OpenAINewsArticle(BaseModel):
-    """An article from the OpenAI news RSS feed."""
+class AnthropicArticle(BaseModel):
+    """An article from an Anthropic RSS feed (news, engineering, or research)."""
 
     title: str
     url: str
     published_at: Optional[datetime] = None
     description: str
     category: Optional[str] = None
+    feed: Optional[str] = None  # "news" | "engineering" | "research"
     markdown: Optional[str] = None
 
 
-class OpenAINewsScraper(BaseScraper):
-    """Scraper for OpenAI news via RSS."""
+class AnthropicNewsScraper(BaseScraper):
+    """Scraper for Anthropic content via multiple RSS feeds (news, engineering, research)."""
 
     def __init__(self):
-        super().__init__("OpenAI News")
+        super().__init__("Anthropic News")
 
     def parse_rss_feed(
-        self, rss_url: str = OPENAI_NEWS_RSS_URL
-    ) -> List[OpenAINewsArticle]:
+        self,
+        rss_url: str,
+        *,
+        feed_name: Optional[str] = None,
+    ) -> List[AnthropicArticle]:
         """
-        Parse OpenAI news RSS feed and extract article information.
+        Parse a single Anthropic RSS feed and extract article information.
 
         Args:
-            rss_url: URL of the RSS feed (default: OpenAI news feed).
+            rss_url: URL of the RSS feed.
+            feed_name: Optional label for the feed (e.g. "news", "engineering", "research").
 
         Returns:
-            List of OpenAINewsArticle models.
+            List of AnthropicArticle models.
         """
         try:
             feed = feedparser.parse(rss_url)
@@ -54,7 +72,7 @@ class OpenAINewsScraper(BaseScraper):
                     "Feed parsing issues for %s: %s", rss_url, feed.bozo_exception
                 )
 
-            articles: List[OpenAINewsArticle] = []
+            articles: List[AnthropicArticle] = []
             for entry in feed.entries:
                 try:
                     published_at = (
@@ -67,17 +85,18 @@ class OpenAINewsScraper(BaseScraper):
                         category = entry.tags[0].get("term") or entry.tags[0].get(
                             "label"
                         )
-                    article = OpenAINewsArticle(
+                    article = AnthropicArticle(
                         title=entry.get("title", ""),
                         url=entry.get("link", ""),
                         published_at=published_at,
                         description=entry.get("summary", "")
                         or entry.get("description", ""),
                         category=category,
+                        feed=feed_name,
                     )
                     articles.append(article)
                 except Exception as e:
-                    logger.error("Error parsing news entry: %s", e)
+                    logger.error("Error parsing Anthropic entry: %s", e)
                     continue
 
             return articles
@@ -86,22 +105,26 @@ class OpenAINewsScraper(BaseScraper):
             logger.error("Error fetching RSS feed %s: %s", rss_url, e)
             return []
 
-    def fetch_latest(self, hours: int = 24, **kwargs) -> List[OpenAINewsArticle]:
+    def fetch_latest(self, hours: int = 24, **kwargs) -> List[AnthropicArticle]:
         """
-        Fetch latest articles from OpenAI news.
+        Fetch latest articles from all Anthropic feeds (news, engineering, research).
 
         Args:
             hours: Number of hours to look back (default: 24).
 
         Returns:
-            List of OpenAINewsArticle models filtered by timeframe.
+            List of AnthropicArticle models from all feeds, filtered by timeframe.
         """
-        logger.info("Fetching OpenAI news from %s", OPENAI_NEWS_RSS_URL)
-        articles = self.parse_rss_feed(OPENAI_NEWS_RSS_URL)
+        all_articles: List[AnthropicArticle] = []
 
-        dicts = [a.model_dump(mode="python") for a in articles]
+        for rss_url, feed_name in ANTHROPIC_RSS_FEEDS:
+            logger.info("Fetching Anthropic feed: %s (%s)", feed_name, rss_url)
+            articles = self.parse_rss_feed(rss_url, feed_name=feed_name)
+            all_articles.extend(articles)
+
+        dicts = [a.model_dump(mode="python") for a in all_articles]
         filtered_dicts = self.filter_by_timeframe(dicts, hours=hours)
-        filtered_articles = [OpenAINewsArticle(**d) for d in filtered_dicts]
+        filtered_articles = [AnthropicArticle(**d) for d in filtered_dicts]
 
         # Fetch markdown content for each article
         for article in filtered_articles:
@@ -112,9 +135,10 @@ class OpenAINewsScraper(BaseScraper):
                 logger.warning("Failed to fetch markdown for %s: %s", article.url, e)
 
         logger.info(
-            "Found %d articles in the last %d hours",
+            "Found %d articles in the last %d hours across %d Anthropic feeds",
             len(filtered_articles),
             hours,
+            len(ANTHROPIC_RSS_FEEDS),
         )
         return filtered_articles
 
@@ -128,7 +152,19 @@ class OpenAINewsScraper(BaseScraper):
         """
         Convert XML string to a human-readable markdown representation.
 
-        Delegates to the shared app.services.xml_to_markdown converter.
+        Element tags become headings; text nodes become paragraphs.
+        Namespace prefixes are stripped from tag names.
+
+        Args:
+            xml_content: Raw XML string (e.g. from a file or RSS feed).
+            root_title: Optional title for the document (first heading).
+            max_heading_level: Maximum markdown heading level 1–6 (default: 6).
+
+        Returns:
+            Markdown string representing the XML structure.
+
+        Raises:
+            xml.etree.ElementTree.ParseError: If xml_content is not valid XML.
         """
         return _xml_to_markdown(
             xml_content,
@@ -147,8 +183,20 @@ class OpenAINewsScraper(BaseScraper):
         """
         Fetch a URL and convert its content to markdown.
 
-        Uses trafilatura first; if no main content (e.g. XML/RSS), falls back
-        to the same xml_to_markdown converter as AnthropicNewsScraper.
+        Uses trafilatura to fetch and extract main content to markdown. If the
+        URL returns XML (e.g. RSS), falls back to xml_to_markdown.
+
+        Args:
+            url: The URL to fetch (HTML page or RSS/XML feed).
+            timeout: Request timeout in seconds (default: 10).
+            root_title: Optional title for the markdown document (used for XML fallback).
+            max_heading_level: Maximum markdown heading level 1–6 for XML (default: 6).
+
+        Returns:
+            The page/feed content as a markdown string.
+
+        Raises:
+            ValueError: If the URL could not be fetched.
         """
         downloaded = trafilatura.fetch_url(url)
         if not downloaded:
@@ -167,14 +215,16 @@ class OpenAINewsScraper(BaseScraper):
 
 
 if __name__ == "__main__":
-    scraper = OpenAINewsScraper()
-    # articles = scraper.fetch_latest(hours=24 * 7)  # last 7 days for demo
-    # for a in articles[:5]:
+    scraper = AnthropicNewsScraper()
+    markdown = scraper.url_to_markdown("https://www.anthropic.com/news")
+    print(markdown)
+
+    # articles = scraper.fetch_latest(hours=24 * 7)
+    # for a in articles[:8]:
     #     print("---")
     #     print("title:", a.title)
     #     print("url:", a.url)
     #     print("published_at:", a.published_at)
+    #     print("feed:", a.feed)
     #     print("category:", a.category)
     #     print("description:", (a.description or "")[:120], "...")
-    markdown = scraper.url_to_markdown("https://openai.com/news/")
-    print(markdown)

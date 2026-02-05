@@ -7,7 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.database.models import AnthropicArticle, OpenAINewsArticle, YouTubeVideo
+from app.database.models import (
+    AnthropicArticle,
+    DigestItem,
+    OpenAINewsArticle,
+    YouTubeVideo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -172,3 +177,119 @@ class Repository:
         row.transcript = transcript
         self.session.commit()
         return True
+
+    # -------------------------------------------------------------------------
+    # Digest methods
+    # -------------------------------------------------------------------------
+
+    def get_articles_without_digest(
+        self, hours: int = 24
+    ) -> dict[str, List[Any]]:
+        """
+        Get all articles/videos from the last N hours that don't have a digest yet.
+
+        Returns:
+            Dict with keys "youtube", "openai", "anthropic", each containing a list.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+
+        # Get IDs that already have digests
+        existing_youtube = set(
+            self.session.scalars(
+                select(DigestItem.youtube_video_id).where(
+                    DigestItem.youtube_video_id.isnot(None)
+                )
+            ).all()
+        )
+        existing_openai = set(
+            self.session.scalars(
+                select(DigestItem.openai_article_id).where(
+                    DigestItem.openai_article_id.isnot(None)
+                )
+            ).all()
+        )
+        existing_anthropic = set(
+            self.session.scalars(
+                select(DigestItem.anthropic_article_id).where(
+                    DigestItem.anthropic_article_id.isnot(None)
+                )
+            ).all()
+        )
+
+        # YouTube videos without digest
+        youtube_stmt = select(YouTubeVideo).where(
+            YouTubeVideo.created_at >= cutoff,
+            YouTubeVideo.id.notin_(existing_youtube) if existing_youtube else True,
+        )
+        youtube_videos = list(self.session.scalars(youtube_stmt).all())
+
+        # OpenAI articles without digest
+        openai_stmt = select(OpenAINewsArticle).where(
+            OpenAINewsArticle.created_at >= cutoff,
+            OpenAINewsArticle.id.notin_(existing_openai) if existing_openai else True,
+        )
+        openai_articles = list(self.session.scalars(openai_stmt).all())
+
+        # Anthropic articles without digest
+        anthropic_stmt = select(AnthropicArticle).where(
+            AnthropicArticle.created_at >= cutoff,
+            AnthropicArticle.id.notin_(existing_anthropic) if existing_anthropic else True,
+        )
+        anthropic_articles = list(self.session.scalars(anthropic_stmt).all())
+
+        return {
+            "youtube": youtube_videos,
+            "openai": openai_articles,
+            "anthropic": anthropic_articles,
+        }
+
+    def add_digest_item(
+        self,
+        source_type: str,
+        source_id: int,
+        url: str,
+        title: str,
+        summary: str,
+        published_at: Any = None,
+    ) -> DigestItem:
+        """
+        Add a digest item linking to a source article/video.
+
+        Args:
+            source_type: "youtube", "openai", or "anthropic"
+            source_id: The ID of the source record
+            url: URL to the original content
+            title: Title of the content
+            summary: AI-generated 2-3 sentence summary
+            published_at: Original publish date
+
+        Returns:
+            The created DigestItem
+        """
+        item = DigestItem(
+            source_type=source_type,
+            youtube_video_id=source_id if source_type == "youtube" else None,
+            openai_article_id=source_id if source_type == "openai" else None,
+            anthropic_article_id=source_id if source_type == "anthropic" else None,
+            url=url,
+            title=title,
+            summary=summary,
+            published_at=published_at,
+        )
+        self.session.add(item)
+        self.session.commit()
+        return item
+
+    def get_digest_items(self, hours: int = 24) -> List[DigestItem]:
+        """Get digest items from the last N hours."""
+        from datetime import datetime, timedelta, timezone
+
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        stmt = (
+            select(DigestItem)
+            .where(DigestItem.created_at >= cutoff)
+            .order_by(DigestItem.created_at.desc())
+        )
+        return list(self.session.scalars(stmt).all())

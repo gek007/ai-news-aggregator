@@ -28,7 +28,7 @@ How ro run it:
 
 # get trascript from youtube video
 
-4. uv run app.jobs.fetch_transcripts
+4. uv run .\app\jobs\fetch_transcripts.py
 
 # create summary
 

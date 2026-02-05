@@ -126,6 +126,14 @@ class AnthropicNewsScraper(BaseScraper):
         filtered_dicts = self.filter_by_timeframe(dicts, hours=hours)
         filtered_articles = [AnthropicArticle(**d) for d in filtered_dicts]
 
+        # Fetch markdown content for each article
+        for article in filtered_articles:
+            try:
+                logger.info("Fetching markdown for: %s", article.url)
+                article.markdown = self.url_to_markdown(article.url)
+            except Exception as e:
+                logger.warning("Failed to fetch markdown for %s: %s", article.url, e)
+
         logger.info(
             "Found %d articles in the last %d hours across %d Anthropic feeds",
             len(filtered_articles),

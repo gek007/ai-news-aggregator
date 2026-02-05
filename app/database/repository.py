@@ -1,7 +1,7 @@
 """Repository for persisting and querying aggregated content."""
 
 import logging
-from typing import Any, List, Optional
+from typing import Any, List
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert

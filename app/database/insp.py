@@ -1,8 +1,6 @@
-from app.database import engine
 from sqlalchemy import inspect
 from app.database.session import DATABASE_URL, create_engine
 import os
-from dotenv import load_dotenv
 
 
 def main():

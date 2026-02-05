@@ -5,5 +5,5 @@ from typing import List
 # YouTube channel IDs to monitor. Add more as needed.
 # Example: OpenAI's channel is UCXZCJLdBC09xxGZ6gcdrc6A
 YOUTUBE_CHANNEL_IDS: List[str] = [
-    "UCPjNBjflYl0-HQtUvOx0Ibw",  # example; replace with channels you want
+    "UCygnHvXjsEa_gLMH-WmzeXQ",  # example; replace with channels you want
 ]

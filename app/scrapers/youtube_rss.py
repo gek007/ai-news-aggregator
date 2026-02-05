@@ -165,7 +165,8 @@ class YouTubeRSSScraper(BaseScraper):
 
             videos = self.parse_rss_feed(rss_url)
             for v in videos:
-                all_videos.append(ChannelVideo(**v.model_dump(), channel_id=channel_id))
+                v.channel_id = channel_id
+                all_videos.append(v)
 
         # Filter by timeframe (base expects list of dicts)
         dicts = [v.model_dump(mode="python") for v in all_videos]

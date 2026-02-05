@@ -252,6 +252,8 @@ class Repository:
         url: str,
         title: str,
         summary: str,
+        key_topics: List[str] | None = None,
+        content_category: str | None = None,
         published_at: Any = None,
     ) -> DigestItem:
         """
@@ -263,11 +265,15 @@ class Repository:
             url: URL to the original content
             title: Title of the content
             summary: AI-generated 2-3 sentence summary
+            key_topics: List of key topics from structured output
+            content_category: Content type (announcement, tutorial, research, etc.)
             published_at: Original publish date
 
         Returns:
             The created DigestItem
         """
+        import json
+
         item = DigestItem(
             source_type=source_type,
             youtube_video_id=source_id if source_type == "youtube" else None,
@@ -276,6 +282,8 @@ class Repository:
             url=url,
             title=title,
             summary=summary,
+            key_topics=json.dumps(key_topics) if key_topics else None,
+            content_category=content_category,
             published_at=published_at,
         )
         self.session.add(item)

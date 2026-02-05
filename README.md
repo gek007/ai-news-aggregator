@@ -26,6 +26,10 @@ How ro run it:
 
 3. uv run .\main.py
 
+# get trascript from youtube video
+
+4. uv run app.jobs.fetch_transcripts
+
 # create summary
 
 4. uv run .\app\services\digest_service.py

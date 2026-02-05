@@ -1,4 +1,4 @@
-"""Digest summary agent using OpenAI's Responses API with GPT-4.1 Mini."""
+"""Digest summary agent using OpenAI's Responses API with GPT-4.1 Mini and structured output."""
 
 import logging
 import os
@@ -6,11 +6,10 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from openai import OpenAI
+from pydantic import BaseModel, Field
 
 load_dotenv()
 load_dotenv(".env.local", override=True)
-
-print("OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY"))
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +25,22 @@ Your task:
 The summary should help a busy reader quickly understand what the content is about and whether they should read/watch the full version."""
 
 
+class DigestSummary(BaseModel):
+    """Structured output for digest summary."""
+
+    summary: str = Field(
+        description="A concise 2-3 sentence summary of the content that captures key points"
+    )
+    key_topics: list[str] = Field(
+        description="List of 2-4 key topics or themes covered in the content"
+    )
+    content_type: str = Field(
+        description="Type of content: 'announcement', 'tutorial', 'research', 'news', 'opinion', or 'other'"
+    )
+
+
 class DigestAgent:
-    """Agent that creates digest summaries using OpenAI GPT-4.1 Mini."""
+    """Agent that creates digest summaries using OpenAI GPT-4.1 Mini with structured output."""
 
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4.1-mini"):
         """
@@ -51,9 +64,9 @@ class DigestAgent:
         content: str,
         title: Optional[str] = None,
         content_type: str = "article",
-    ) -> str:
+    ) -> DigestSummary:
         """
-        Generate a 2-3 sentence summary of the content.
+        Generate a structured summary of the content.
 
         Args:
             content: The full text content to summarize (article markdown or transcript).
@@ -61,7 +74,7 @@ class DigestAgent:
             content_type: Type of content ("article", "video", "blog post").
 
         Returns:
-            A 2-3 sentence summary string.
+            DigestSummary with summary, key_topics, and content_type.
         """
         # Truncate content if too long (keep under ~12k tokens for safety)
         max_chars = 40000
@@ -74,24 +87,47 @@ class DigestAgent:
         user_message += f":\n\n{content}"
 
         try:
-            response = self.client.responses.create(
+            response = self.client.responses.parse(
                 model=self.model,
                 instructions=SYSTEM_PROMPT,
-                input=user_message,
+                input=[
+                    {"role": "user", "content": user_message},
+                ],
+                text_format=DigestSummary,
             )
-            summary = response.output_text.strip()
+            result = response.output_parsed
             logger.info(
                 "Generated summary for: %s", title[:50] if title else "untitled"
             )
-            return summary
+            return result
 
         except Exception as e:
             logger.error("Failed to generate summary: %s", e)
             raise
 
+    def summarize_text(
+        self,
+        content: str,
+        title: Optional[str] = None,
+        content_type: str = "article",
+    ) -> str:
+        """
+        Generate a plain text summary (convenience method).
+
+        Args:
+            content: The full text content to summarize.
+            title: Optional title to provide context.
+            content_type: Type of content ("article", "video", "blog post").
+
+        Returns:
+            A 2-3 sentence summary string.
+        """
+        result = self.summarize(content, title=title, content_type=content_type)
+        return result.summary
+
     def summarize_youtube(
         self, title: str, transcript: Optional[str], description: Optional[str] = None
-    ) -> str:
+    ) -> DigestSummary:
         """
         Summarize a YouTube video.
 
@@ -101,7 +137,7 @@ class DigestAgent:
             description: Video description (fallback if no transcript).
 
         Returns:
-            A 2-3 sentence summary.
+            DigestSummary with summary, key_topics, and content_type.
         """
         if transcript:
             content = transcript
@@ -114,7 +150,7 @@ class DigestAgent:
 
     def summarize_article(
         self, title: str, markdown: Optional[str], description: Optional[str] = None
-    ) -> str:
+    ) -> DigestSummary:
         """
         Summarize an article (OpenAI or Anthropic).
 
@@ -124,7 +160,7 @@ class DigestAgent:
             description: Article description/excerpt (fallback).
 
         Returns:
-            A 2-3 sentence summary.
+            DigestSummary with summary, key_topics, and content_type.
         """
         if markdown:
             content = markdown
@@ -148,5 +184,7 @@ if __name__ == "__main__":
     The model was trained on a larger dataset and uses a new architecture that improves efficiency by 40%.
     """
 
-    summary = agent.summarize(test_content, title="OpenAI Announces GPT-5")
-    print(f"Summary: {summary}")
+    result = agent.summarize(test_content, title="OpenAI Announces GPT-5")
+    print(f"Summary: {result.summary}")
+    print(f"Key Topics: {result.key_topics}")
+    print(f"Content Type: {result.content_type}")

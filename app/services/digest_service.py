@@ -64,7 +64,7 @@ def process_digest(hours: int = 24) -> dict:
                     continue
 
                 logger.info("Summarizing YouTube: %s", video.title[:50])
-                summary = agent.summarize_youtube(
+                digest_result = agent.summarize_youtube(
                     title=video.title,
                     transcript=video.transcript,
                     description=video.description,
@@ -74,7 +74,9 @@ def process_digest(hours: int = 24) -> dict:
                     source_id=video.id,
                     url=video.url,
                     title=video.title,
-                    summary=summary,
+                    summary=digest_result.summary,
+                    key_topics=digest_result.key_topics,
+                    content_category=digest_result.content_type,
                     published_at=video.published_at,
                 )
                 result["success"] += 1
@@ -95,7 +97,7 @@ def process_digest(hours: int = 24) -> dict:
                     continue
 
                 logger.info("Summarizing OpenAI: %s", article.title[:50])
-                summary = agent.summarize_article(
+                digest_result = agent.summarize_article(
                     title=article.title,
                     markdown=article.markdown,
                     description=article.description,
@@ -105,7 +107,9 @@ def process_digest(hours: int = 24) -> dict:
                     source_id=article.id,
                     url=article.url,
                     title=article.title,
-                    summary=summary,
+                    summary=digest_result.summary,
+                    key_topics=digest_result.key_topics,
+                    content_category=digest_result.content_type,
                     published_at=article.published_at,
                 )
                 result["success"] += 1
@@ -126,7 +130,7 @@ def process_digest(hours: int = 24) -> dict:
                     continue
 
                 logger.info("Summarizing Anthropic: %s", article.title[:50])
-                summary = agent.summarize_article(
+                digest_result = agent.summarize_article(
                     title=article.title,
                     markdown=article.markdown,
                     description=article.description,
@@ -136,7 +140,9 @@ def process_digest(hours: int = 24) -> dict:
                     source_id=article.id,
                     url=article.url,
                     title=article.title,
-                    summary=summary,
+                    summary=digest_result.summary,
+                    key_topics=digest_result.key_topics,
+                    content_category=digest_result.content_type,
                     published_at=article.published_at,
                 )
                 result["success"] += 1

@@ -108,6 +108,14 @@ class DigestItem(Base):
     # AI-generated summary (2-3 sentences)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
 
+    # Structured output fields from OpenAI
+    key_topics: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True
+    )  # JSON array stored as text
+    content_category: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True
+    )  # announcement, tutorial, research, news, opinion, other
+
     # Metadata
     published_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True

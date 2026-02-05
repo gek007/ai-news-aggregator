@@ -52,6 +52,7 @@ class OpenAINewsArticle(Base):
         DateTime(timezone=True), nullable=True
     )
     category: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    markdown: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -73,6 +74,7 @@ class AnthropicArticle(Base):
     )
     category: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
     feed: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    markdown: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

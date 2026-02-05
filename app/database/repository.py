@@ -84,6 +84,8 @@ class Repository:
                     or (a.get("published_at") if isinstance(a, dict) else None),
                     category=getattr(a, "category", None)
                     or (a.get("category") if isinstance(a, dict) else None),
+                    markdown=getattr(a, "markdown", None)
+                    or (a.get("markdown") if isinstance(a, dict) else None),
                 )
                 .on_conflict_do_update(
                     index_elements=["url"],
@@ -92,6 +94,7 @@ class Repository:
                         "description": insert(OpenAINewsArticle).excluded.description,
                         "published_at": insert(OpenAINewsArticle).excluded.published_at,
                         "category": insert(OpenAINewsArticle).excluded.category,
+                        "markdown": insert(OpenAINewsArticle).excluded.markdown,
                     },
                 )
             )
@@ -125,6 +128,8 @@ class Repository:
                     or (a.get("category") if isinstance(a, dict) else None),
                     feed=getattr(a, "feed", None)
                     or (a.get("feed") if isinstance(a, dict) else None),
+                    markdown=getattr(a, "markdown", None)
+                    or (a.get("markdown") if isinstance(a, dict) else None),
                 )
                 .on_conflict_do_update(
                     index_elements=["url"],
@@ -134,6 +139,7 @@ class Repository:
                         "published_at": insert(AnthropicArticle).excluded.published_at,
                         "category": insert(AnthropicArticle).excluded.category,
                         "feed": insert(AnthropicArticle).excluded.feed,
+                        "markdown": insert(AnthropicArticle).excluded.markdown,
                     },
                 )
             )

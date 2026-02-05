@@ -25,6 +25,7 @@ class OpenAINewsArticle(BaseModel):
     published_at: Optional[datetime] = None
     description: str
     category: Optional[str] = None
+    markdown: Optional[str] = None
 
 
 class OpenAINewsScraper(BaseScraper):
@@ -101,6 +102,14 @@ class OpenAINewsScraper(BaseScraper):
         dicts = [a.model_dump(mode="python") for a in articles]
         filtered_dicts = self.filter_by_timeframe(dicts, hours=hours)
         filtered_articles = [OpenAINewsArticle(**d) for d in filtered_dicts]
+
+        # Fetch markdown content for each article
+        for article in filtered_articles:
+            try:
+                logger.info("Fetching markdown for: %s", article.url)
+                article.markdown = self.url_to_markdown(article.url)
+            except Exception as e:
+                logger.warning("Failed to fetch markdown for %s: %s", article.url, e)
 
         logger.info(
             "Found %d articles in the last %d hours",

@@ -39,6 +39,7 @@ class AnthropicArticle(BaseModel):
     description: str
     category: Optional[str] = None
     feed: Optional[str] = None  # "news" | "engineering" | "research"
+    markdown: Optional[str] = None
 
 
 class AnthropicNewsScraper(BaseScraper):

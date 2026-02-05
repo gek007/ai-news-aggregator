@@ -11,3 +11,5 @@ wheels/
 
 # Environment (keep secrets out of repo)
 .env
+
+.env.local

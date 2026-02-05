@@ -32,3 +32,11 @@ def get_session() -> Session:
 def create_all_tables() -> None:
     """Create all tables defined in models."""
     Base.metadata.create_all(bind=engine)
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    engine = create_engine(DATABASE_URL)
+    create_all_tables()
+    print("Tables created.")

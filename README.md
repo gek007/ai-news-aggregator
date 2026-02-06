@@ -41,3 +41,6 @@ DB:
 # ranking digest news according to user profile  
 6.uv run .app\services\ranking_service.py
 
+# send digest to defined email: 
+7. python -m app.services.email_service --hours 24 --limit 10
+

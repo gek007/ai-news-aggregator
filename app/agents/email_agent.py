@@ -21,7 +21,7 @@ Goal:
 
 Rules:
 - Start with a short greeting using the user's display name.
-- Include a 1-2 sentence intro summary of the digest theme.
+- Include a 1-2 sentence intro summary of the digest theme and explicitly mention the provided date.
 - List the top items with title, short reason, and URL.
 - Keep the tone professional and helpful.
 - Do not invent facts or URLs.

@@ -44,3 +44,12 @@ DB:
 # send digest to defined email: 
 7. python -m app.services.email_service --hours 24 --limit 10
 
+
+============== 
+
+# or just run daily runner 
+python -m app.services.daily_runner --hours 24 --limit 10
+
+
+
+

@@ -4,6 +4,7 @@ import logging
 from typing import Any, List
 
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -374,3 +375,26 @@ class Repository:
         if count:
             self.session.commit()
         return count
+
+    def get_top_ranked_digest_items(
+        self,
+        user_profile_id: int,
+        hours: int = 24,
+        limit: int = 10,
+    ) -> list[tuple[DigestRanking, DigestItem]]:
+        """Return top ranked digest items for a user profile in the last N hours."""
+        from datetime import datetime, timedelta, timezone
+
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        stmt = (
+            select(DigestRanking, DigestItem)
+            .join(DigestItem, DigestRanking.digest_item_id == DigestItem.id)
+            .where(
+                DigestRanking.user_profile_id == user_profile_id,
+                DigestRanking.created_at >= cutoff,
+            )
+            .order_by(DigestRanking.rank.asc())
+            .limit(limit)
+            .options(joinedload(DigestRanking.digest_item))
+        )
+        return list(self.session.execute(stmt).all())

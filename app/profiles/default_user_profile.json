@@ -1,5 +1,6 @@
 {
   "name": "default",
+  "display_name": "Dave",
   "description": "Product-minded AI engineer focused on practical LLM systems and developer tooling.",
   "interests": [
     "LLM tooling and infrastructure",

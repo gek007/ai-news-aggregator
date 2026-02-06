@@ -1,0 +1,32 @@
+{
+  "name": "default",
+  "display_name": "Dave",
+  "description": "Product-minded AI engineer focused on practical LLM systems and developer tooling.",
+  "interests": [
+    "LLM tooling and infrastructure",
+    "agent frameworks and orchestration",
+    "evaluation and benchmarking",
+    "model safety and alignment",
+    "open-source AI libraries",
+    "applied research with clear engineering impact",
+    "retrieval-augmented generation",
+    "vector databases and search",
+    "MLOps and production deployment"
+  ],
+  "avoid_topics": [
+    "crypto",
+    "marketing hype",
+    "celebrity news",
+    "non-technical opinion pieces"
+  ],
+  "preferred_content_types": [
+    "research",
+    "tutorial",
+    "announcement"
+  ],
+  "preferred_sources": [
+    "openai",
+    "anthropic",
+    "youtube"
+  ]
+}

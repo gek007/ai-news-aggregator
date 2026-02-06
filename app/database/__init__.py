@@ -3,9 +3,11 @@
 from app.database.models import (
     AnthropicArticle,
     Base,
+    DigestRanking,
     DigestItem,
     OpenAINewsArticle,
     YouTubeVideo,
+    UserProfile,
 )
 from app.database.repository import Repository
 from app.database.session import SessionLocal, create_all_tables, engine, get_session
@@ -13,9 +15,11 @@ from app.database.session import SessionLocal, create_all_tables, engine, get_se
 __all__ = [
     "AnthropicArticle",
     "Base",
+    "DigestRanking",
     "DigestItem",
     "OpenAINewsArticle",
     "YouTubeVideo",
+    "UserProfile",
     "Repository",
     "SessionLocal",
     "create_all_tables",

@@ -14,6 +14,10 @@ UCc-FovAyBAQDw2Y7PQ_v0Zw
 
 How ro run it:
 
+DB:
+"postgresql://postgres:postgres@localhost:5432/ai_news_aggregator",
+
+
 # drop tables
 
 1. uv run .\app\database\drop_tables.py
@@ -32,4 +36,11 @@ How ro run it:
 
 # create summary
 
-4. uv run .\app\services\digest_service.py
+5. uv run .\app\services\digest_service.py
+
+# ranking digest news according to user profile  
+6.uv run .app\services\ranking_service.py
+
+# send digest to defined email: 
+7. python -m app.services.email_service --hours 24 --limit 10
+

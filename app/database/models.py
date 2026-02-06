@@ -134,3 +134,51 @@ class DigestItem(Base):
     anthropic_article: Mapped[Optional["AnthropicArticle"]] = relationship(
         "AnthropicArticle", foreign_keys=[anthropic_article_id]
     )
+
+
+class UserProfile(Base):
+    """User profile with interests for ranking personalization."""
+
+    __tablename__ = "user_profiles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # JSON-encoded lists stored as text
+    interests: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    avoid_topics: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    preferred_content_types: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    preferred_sources: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class DigestRanking(Base):
+    """Ranking of digest items for a specific user profile."""
+
+    __tablename__ = "digest_rankings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_profile_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("user_profiles.id"), nullable=False, index=True
+    )
+    digest_item_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("digest_items.id"), nullable=False, index=True
+    )
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    rationale: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user_profile: Mapped["UserProfile"] = relationship("UserProfile")
+    digest_item: Mapped["DigestItem"] = relationship("DigestItem")

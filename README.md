@@ -36,4 +36,8 @@ DB:
 
 # create summary
 
-4. uv run .\app\services\digest_service.py
+5. uv run .\app\services\digest_service.py
+
+# ranking digest news according to user profile  
+6.uv run .app\services\ranking_service.py
+

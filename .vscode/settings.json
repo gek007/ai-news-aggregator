@@ -10,5 +10,6 @@
       "database": "postgres",
       "username": "postgres"
     }
-  ]
+  ],
+  "python.languageServer": "None"
 }

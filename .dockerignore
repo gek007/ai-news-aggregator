@@ -1,0 +1,16 @@
+.git
+.gitignore
+.venv
+.vscode
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+.env
+.env.local
+ai_news_aggregator.egg-info
+uv.lock
+Plan
+docker
+docker_postgres.session.sql

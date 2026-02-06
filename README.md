@@ -14,6 +14,10 @@ UCc-FovAyBAQDw2Y7PQ_v0Zw
 
 How ro run it:
 
+DB:
+"postgresql://postgres:postgres@localhost:5432/ai_news_aggregator",
+
+
 # drop tables
 
 1. uv run .\app\database\drop_tables.py

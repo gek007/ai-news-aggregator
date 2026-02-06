@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.database.models import (
     AnthropicArticle,
+    DigestRanking,
     DigestItem,
     OpenAINewsArticle,
     YouTubeVideo,
+    UserProfile,
 )
 
 logger = logging.getLogger(__name__)
@@ -301,3 +303,74 @@ class Repository:
             .order_by(DigestItem.created_at.desc())
         )
         return list(self.session.scalars(stmt).all())
+
+    # -------------------------------------------------------------------------
+    # User profile + ranking methods
+    # -------------------------------------------------------------------------
+
+    def get_user_profile_by_name(self, name: str) -> UserProfile | None:
+        """Get a user profile by name."""
+        stmt = select(UserProfile).where(UserProfile.name == name)
+        return self.session.scalars(stmt).one_or_none()
+
+    def upsert_user_profile(
+        self,
+        name: str,
+        description: str | None = None,
+        interests: list[str] | None = None,
+        avoid_topics: list[str] | None = None,
+        preferred_content_types: list[str] | None = None,
+        preferred_sources: list[str] | None = None,
+    ) -> UserProfile:
+        """Create or update a user profile."""
+        import json
+
+        profile = self.get_user_profile_by_name(name)
+        if profile is None:
+            profile = UserProfile(name=name)
+            self.session.add(profile)
+
+        profile.description = description
+        profile.interests = json.dumps(interests) if interests else None
+        profile.avoid_topics = json.dumps(avoid_topics) if avoid_topics else None
+        profile.preferred_content_types = (
+            json.dumps(preferred_content_types) if preferred_content_types else None
+        )
+        profile.preferred_sources = (
+            json.dumps(preferred_sources) if preferred_sources else None
+        )
+
+        self.session.commit()
+        return profile
+
+    def add_digest_rankings(
+        self,
+        user_profile_id: int,
+        rankings: list[dict[str, Any]],
+    ) -> int:
+        """
+        Persist ranking results for a user profile.
+
+        Args:
+            user_profile_id: ID of the user profile
+            rankings: List of dicts with keys: digest_item_id, rank, score, rationale
+
+        Returns:
+            Number of rankings inserted.
+        """
+        if not rankings:
+            return 0
+        count = 0
+        for r in rankings:
+            item = DigestRanking(
+                user_profile_id=user_profile_id,
+                digest_item_id=r["digest_item_id"],
+                rank=r["rank"],
+                score=r["score"],
+                rationale=r.get("rationale"),
+            )
+            self.session.add(item)
+            count += 1
+        if count:
+            self.session.commit()
+        return count

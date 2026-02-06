@@ -48,20 +48,6 @@ def _ranking_row_to_payload(ranking, item) -> dict:
     }
 
 
-def _truncate_summary_lines(text: str, max_lines: int = 4) -> str:
-    if not text:
-        return ""
-    if "\n" in text:
-        lines = [l.strip() for l in text.splitlines() if l.strip()]
-        return "\n".join(lines[:max_lines])
-
-    sentences = [s.strip() for s in text.split(".") if s.strip()]
-    truncated = ". ".join(sentences[:max_lines])
-    if truncated and not truncated.endswith("."):
-        truncated += "."
-    return truncated
-
-
 def process_email(hours: int = 24, limit: int = 10) -> dict:
     """
     Generate an email draft from top-ranked digest items.
@@ -140,23 +126,20 @@ def _send_email_if_configured(draft) -> None:
     msg["To"] = email_to
 
     lines = []
-    lines.append(f"**{draft.greeting}**")
+    lines.append(draft.greeting)
     lines.append("")
     lines.append(draft.intro)
     lines.append("")
-    lines.append("## Top ranked articles")
-    lines.append("")
     for item in draft.items:
-        summary = _truncate_summary_lines(item.summary, max_lines=4)
-        lines.append(f"{item.rank}. **[{item.title}]({item.url})** (Score: {item.score})")
-        if summary:
-            lines.append(summary)
+        lines.append(f"{item.rank}. {item.title} (Score: {item.score})")
+        if item.summary:
+            lines.append(f"- {item.summary}")
         if item.reason:
-            lines.append(f"*Why this matters:* {item.reason}")
-        lines.append(f"[Read more]({item.url})")
+            lines.append(f"- {item.reason}")
+        lines.append(f"- {item.url}")
         lines.append("")
     lines.append(draft.closing)
-    msg.set_content("\n".join(lines), subtype="markdown")
+    msg.set_content("\n".join(lines))
 
     with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
         smtp.starttls()

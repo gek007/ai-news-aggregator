@@ -1,0 +1,10 @@
+services:
+  - type: cron
+    name: ai-news-aggregator-daily
+    runtime: python
+    schedule: "0 9 * * *"
+    buildCommand: "pip install ."
+    startCommand: "python -m app.services.daily_runner --hours 24 --limit 10"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false

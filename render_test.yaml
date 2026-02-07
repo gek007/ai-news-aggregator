@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: test
+    runtime: python
+    buildCommand: "echo ok"
+    startCommand: "echo ok"

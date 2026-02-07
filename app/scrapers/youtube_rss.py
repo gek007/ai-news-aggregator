@@ -77,12 +77,20 @@ class YouTubeRSSScraper(BaseScraper):
                         if hasattr(entry, "published_parsed")
                         else None
                     )
+                    # YouTube feeds often include a dedicated video id field (preferred).
+                    yt_video_id = (
+                        entry.get("yt_videoid")
+                        or entry.get("yt:videoid")
+                        or getattr(entry, "yt_videoid", None)
+                    )
                     video = ChannelVideo(
                         title=entry.get("title", ""),
                         url=entry.get("link", ""),
                         published_at=published_at,
                         description=entry.get("summary", ""),
-                        video_id=self._extract_video_id(entry.get("link", "")),
+                        video_id=yt_video_id
+                        or self._extract_video_id(entry.get("link", ""))
+                        or self._extract_video_id(entry.get("id", "")),
                     )
                     videos.append(video)
                 except Exception as e:
@@ -105,6 +113,13 @@ class YouTubeRSSScraper(BaseScraper):
                     return params.get("v", [None])[0]
                 if parsed.hostname == "youtu.be":
                     return parsed.path.lstrip("/")
+                # Shorts / embed / live URLs are path-based.
+                path_parts = [p for p in parsed.path.split("/") if p]
+                if len(path_parts) >= 2 and path_parts[0] in ("shorts", "embed", "live"):
+                    return path_parts[1]
+            # Some feeds expose ids like "yt:video:VIDEO_ID"
+            if video_url.startswith("yt:video:"):
+                return video_url.split("yt:video:", 1)[1] or None
         except Exception:
             return None
         return None

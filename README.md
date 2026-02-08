@@ -44,6 +44,8 @@ DB:
 # send digest to defined email: 
 7. python -m app.services.email_service --hours 24 --limit 10
 
+# run whole pipeline 
+8.uv run .\main.py  
 
 ============== 
 

@@ -7,35 +7,22 @@ Can be run:
 """
 
 import argparse
-import json
 import logging
 import os
 import smtplib
 from datetime import datetime, timezone
 from email.message import EmailMessage
-from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 
 from app.agents.email_agent import EmailAgent
 from app.database import Repository, get_session
+from app.profiles.loader import DEFAULT_PROFILE_PATH, load_profile
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_PROFILE_PATH = (
-    Path(__file__).resolve().parents[1] / "profiles" / "default_user_profile.json"
-)
-
-
-def _load_profile_from_file(path: Path) -> dict:
-    if not path.exists():
-        raise FileNotFoundError(f"User profile not found at {path}")
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
 
 def _ranking_row_to_payload(ranking, item) -> dict:
     return {
@@ -62,7 +49,7 @@ def process_email(hours: int = 24, limit: int = 10) -> dict:
         repo = Repository(session)
         agent = EmailAgent()
 
-        profile_data = _load_profile_from_file(DEFAULT_PROFILE_PATH)
+        profile_data = load_profile(DEFAULT_PROFILE_PATH)
         profile = repo.get_user_profile_by_name(profile_data["name"])
         if profile is None:
             logger.error("User profile not found in DB: %s", profile_data["name"])

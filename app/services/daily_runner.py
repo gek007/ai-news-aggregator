@@ -12,6 +12,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+from app.database import create_all_tables
 from app.aggregate import run as aggregate_run
 from app.services.digest_service import process_digest
 from app.services.email_service import process_email
@@ -30,6 +31,9 @@ def run_pipeline(hours: int = 24, limit: int = 10) -> dict:
         Dict with step results.
     """
     results = {}
+
+    logger.info("Ensuring database tables exist")
+    create_all_tables()
 
     logger.info("Step 1/4: Aggregation (hours=%d)", hours)
     results["aggregate"] = aggregate_run(hours=hours, persist=True)

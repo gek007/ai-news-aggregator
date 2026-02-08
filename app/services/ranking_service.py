@@ -6,31 +6,22 @@ Can be run:
 """
 
 import argparse
-import json
 import logging
-from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 
 from app.agents.ranking_agent import RankedDigestItem, RankingAgent
 from app.database import Repository, get_session
+from app.profiles.loader import DEFAULT_PROFILE_PATH, load_profile
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_PROFILE_PATH = Path(__file__).resolve().parents[1] / "profiles" / "default_user_profile.json"
-
-
-def _load_profile_from_file(path: Path) -> dict:
-    if not path.exists():
-        raise FileNotFoundError(f"User profile not found at {path}")
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
 def _digest_item_to_payload(item) -> dict:
+    import json
+
     key_topics = None
     if item.key_topics:
         try:
@@ -62,7 +53,7 @@ def process_rankings(hours: int = 24) -> dict:
         repo = Repository(session)
         agent = RankingAgent()
 
-        profile_data = _load_profile_from_file(DEFAULT_PROFILE_PATH)
+        profile_data = load_profile(DEFAULT_PROFILE_PATH)
         profile = repo.upsert_user_profile(
             name=profile_data["name"],
             description=profile_data.get("description"),

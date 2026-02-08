@@ -1,6 +1,5 @@
 """YouTube RSS feed scraper with optional transcript fetching."""
 
-import feedparser
 import logging
 from datetime import datetime
 from typing import List, Optional
@@ -8,7 +7,7 @@ from urllib.parse import urlparse, parse_qs
 
 from pydantic import BaseModel
 
-from app.scrapers.base import BaseScraper
+from app.scrapers.rss_base import BaseRSSScraper
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 
@@ -32,7 +31,7 @@ class Transcript(BaseModel):
     text: str
 
 
-class YouTubeRSSScraper(BaseScraper):
+class YouTubeRSSScraper(BaseRSSScraper):
     """Scraper for YouTube channels using RSS feeds"""
 
     def __init__(self):
@@ -61,47 +60,24 @@ class YouTubeRSSScraper(BaseScraper):
         Returns:
             List of ChannelVideo models
         """
-        try:
-            feed = feedparser.parse(rss_url)
+        def build_video(entry) -> ChannelVideo:
+            # YouTube feeds often include a dedicated video id field (preferred).
+            yt_video_id = (
+                entry.get("yt_videoid")
+                or entry.get("yt:videoid")
+                or getattr(entry, "yt_videoid", None)
+            )
+            return ChannelVideo(
+                title=entry.get("title", ""),
+                url=entry.get("link", ""),
+                published_at=self._parse_published_at(entry),
+                description=entry.get("summary", ""),
+                video_id=yt_video_id
+                or self._extract_video_id(entry.get("link", ""))
+                or self._extract_video_id(entry.get("id", "")),
+            )
 
-            if feed.bozo:
-                logger.warning(
-                    f"Feed parsing issues for {rss_url}: {feed.bozo_exception}"
-                )
-
-            videos: List[ChannelVideo] = []
-            for entry in feed.entries:
-                try:
-                    published_at = (
-                        datetime(*entry.published_parsed[:6])
-                        if hasattr(entry, "published_parsed")
-                        else None
-                    )
-                    # YouTube feeds often include a dedicated video id field (preferred).
-                    yt_video_id = (
-                        entry.get("yt_videoid")
-                        or entry.get("yt:videoid")
-                        or getattr(entry, "yt_videoid", None)
-                    )
-                    video = ChannelVideo(
-                        title=entry.get("title", ""),
-                        url=entry.get("link", ""),
-                        published_at=published_at,
-                        description=entry.get("summary", ""),
-                        video_id=yt_video_id
-                        or self._extract_video_id(entry.get("link", ""))
-                        or self._extract_video_id(entry.get("id", "")),
-                    )
-                    videos.append(video)
-                except Exception as e:
-                    logger.error(f"Error parsing video entry: {e}")
-                    continue
-
-            return videos
-
-        except Exception as e:
-            logger.error(f"Error fetching RSS feed {rss_url}: {e}")
-            return []
+        return super().parse_rss_feed(rss_url, build_video)
 
     def _extract_video_id(self, video_url: str) -> Optional[str]:
         """Extract video ID from YouTube URL"""
@@ -184,9 +160,11 @@ class YouTubeRSSScraper(BaseScraper):
                 all_videos.append(v)
 
         # Filter by timeframe (base expects list of dicts)
-        dicts = [v.model_dump(mode="python") for v in all_videos]
-        filtered_dicts = self.filter_by_timeframe(dicts, hours=hours)
-        filtered_videos = [ChannelVideo(**d) for d in filtered_dicts]
+        filtered_videos = self._filter_models_by_timeframe(
+            all_videos,
+            hours=hours,
+            model_cls=ChannelVideo,
+        )
 
         logger.info(
             f"Found {len(filtered_videos)} videos in the last {hours} hours from {len(channel_ids)} channels"

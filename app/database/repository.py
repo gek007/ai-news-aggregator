@@ -26,136 +26,97 @@ class Repository:
     def __init__(self, session: Session):
         self.session = session
 
+    def _value(self, item: Any, key: str, default: Any = None) -> Any:
+        if isinstance(item, dict):
+            return item.get(key, default)
+        return getattr(item, key, default)
+
+    def _upsert_records(
+        self,
+        model,
+        items: List[Any],
+        *,
+        unique_field: str,
+        field_names: List[str],
+    ) -> int:
+        if not items:
+            return 0
+        count = 0
+        for item in items:
+            unique_value = self._value(item, unique_field, None)
+            if not unique_value:
+                continue
+            values = {name: self._value(item, name, None) for name in field_names}
+            values[unique_field] = unique_value
+            stmt = (
+                insert(model)
+                .values(**values)
+                .on_conflict_do_update(
+                    index_elements=[unique_field],
+                    set_={
+                        name: insert(model).excluded[name]
+                        for name in field_names
+                        if name != unique_field
+                    },
+                )
+            )
+            self.session.execute(stmt)
+            count += 1
+        if count:
+            self.session.commit()
+        return count
+
     def add_youtube_videos(self, videos: List[Any]) -> int:
         """
         Upsert YouTube videos by video_id. Does not overwrite transcript if already set.
         Returns number of rows affected (inserted or updated).
         """
-        if not videos:
-            return 0
-        count = 0
-        for v in videos:
-            video_id = getattr(v, "video_id", None) or (
-                v.get("video_id") if isinstance(v, dict) else None
-            )
-            if not video_id:
-                continue
-            stmt = (
-                insert(YouTubeVideo)
-                .values(
-                    video_id=video_id,
-                    channel_id=getattr(v, "channel_id", None)
-                    or (v.get("channel_id") if isinstance(v, dict) else None),
-                    title=getattr(v, "title", "") or (v.get("title") or ""),
-                    url=getattr(v, "url", "") or (v.get("url") or ""),
-                    description=getattr(v, "description", None)
-                    or (v.get("description") if isinstance(v, dict) else None),
-                    published_at=getattr(v, "published_at", None)
-                    or (v.get("published_at") if isinstance(v, dict) else None),
-                )
-                .on_conflict_do_update(
-                    index_elements=["video_id"],
-                    set_={
-                        "channel_id": insert(YouTubeVideo).excluded.channel_id,
-                        "title": insert(YouTubeVideo).excluded.title,
-                        "url": insert(YouTubeVideo).excluded.url,
-                        "description": insert(YouTubeVideo).excluded.description,
-                        "published_at": insert(YouTubeVideo).excluded.published_at,
-                    },
-                )
-            )
-            self.session.execute(stmt)
-            count += 1
-        if count:
-            self.session.commit()
-        return count
+        return self._upsert_records(
+            YouTubeVideo,
+            videos,
+            unique_field="video_id",
+            field_names=[
+                "video_id",
+                "channel_id",
+                "title",
+                "url",
+                "description",
+                "published_at",
+            ],
+        )
 
     def add_openai_articles(self, articles: List[Any]) -> int:
         """Upsert OpenAI articles by url. Returns number of rows affected."""
-        if not articles:
-            return 0
-        count = 0
-        for a in articles:
-            url = getattr(a, "url", None) or (
-                a.get("url") if isinstance(a, dict) else None
-            )
-            if not url:
-                continue
-            stmt = (
-                insert(OpenAINewsArticle)
-                .values(
-                    url=url,
-                    title=getattr(a, "title", "") or (a.get("title") or ""),
-                    description=getattr(a, "description", None)
-                    or (a.get("description") if isinstance(a, dict) else None),
-                    published_at=getattr(a, "published_at", None)
-                    or (a.get("published_at") if isinstance(a, dict) else None),
-                    category=getattr(a, "category", None)
-                    or (a.get("category") if isinstance(a, dict) else None),
-                    markdown=getattr(a, "markdown", None)
-                    or (a.get("markdown") if isinstance(a, dict) else None),
-                )
-                .on_conflict_do_update(
-                    index_elements=["url"],
-                    set_={
-                        "title": insert(OpenAINewsArticle).excluded.title,
-                        "description": insert(OpenAINewsArticle).excluded.description,
-                        "published_at": insert(OpenAINewsArticle).excluded.published_at,
-                        "category": insert(OpenAINewsArticle).excluded.category,
-                        "markdown": insert(OpenAINewsArticle).excluded.markdown,
-                    },
-                )
-            )
-            self.session.execute(stmt)
-            count += 1
-        if count:
-            self.session.commit()
-        return count
+        return self._upsert_records(
+            OpenAINewsArticle,
+            articles,
+            unique_field="url",
+            field_names=[
+                "url",
+                "title",
+                "description",
+                "published_at",
+                "category",
+                "markdown",
+            ],
+        )
 
     def add_anthropic_articles(self, articles: List[Any]) -> int:
         """Upsert Anthropic articles by url. Returns number of rows affected."""
-        if not articles:
-            return 0
-        count = 0
-        for a in articles:
-            url = getattr(a, "url", None) or (
-                a.get("url") if isinstance(a, dict) else None
-            )
-            if not url:
-                continue
-            stmt = (
-                insert(AnthropicArticle)
-                .values(
-                    url=url,
-                    title=getattr(a, "title", "") or (a.get("title") or ""),
-                    description=getattr(a, "description", None)
-                    or (a.get("description") if isinstance(a, dict) else None),
-                    published_at=getattr(a, "published_at", None)
-                    or (a.get("published_at") if isinstance(a, dict) else None),
-                    category=getattr(a, "category", None)
-                    or (a.get("category") if isinstance(a, dict) else None),
-                    feed=getattr(a, "feed", None)
-                    or (a.get("feed") if isinstance(a, dict) else None),
-                    markdown=getattr(a, "markdown", None)
-                    or (a.get("markdown") if isinstance(a, dict) else None),
-                )
-                .on_conflict_do_update(
-                    index_elements=["url"],
-                    set_={
-                        "title": insert(AnthropicArticle).excluded.title,
-                        "description": insert(AnthropicArticle).excluded.description,
-                        "published_at": insert(AnthropicArticle).excluded.published_at,
-                        "category": insert(AnthropicArticle).excluded.category,
-                        "feed": insert(AnthropicArticle).excluded.feed,
-                        "markdown": insert(AnthropicArticle).excluded.markdown,
-                    },
-                )
-            )
-            self.session.execute(stmt)
-            count += 1
-        if count:
-            self.session.commit()
-        return count
+        return self._upsert_records(
+            AnthropicArticle,
+            articles,
+            unique_field="url",
+            field_names=[
+                "url",
+                "title",
+                "description",
+                "published_at",
+                "category",
+                "feed",
+                "markdown",
+            ],
+        )
 
     def get_youtube_videos_without_transcript(
         self, limit: int = 100

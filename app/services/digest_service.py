@@ -86,71 +86,51 @@ def process_digest(hours: int = 24) -> dict:
                 )
                 result["failed"] += 1
 
-        # Process OpenAI articles
-        for article in articles["openai"]:
-            result["processed"] += 1
-            try:
-                # Skip if no markdown and no description
-                if not article.markdown and not article.description:
-                    logger.info("Skipping OpenAI article %s (no content)", article.url)
-                    result["skipped"] += 1
-                    continue
+        def process_articles(items, source_type: str) -> None:
+            for article in items:
+                result["processed"] += 1
+                try:
+                    if not article.markdown and not article.description:
+                        logger.info(
+                            "Skipping %s article %s (no content)",
+                            source_type.capitalize(),
+                            article.url,
+                        )
+                        result["skipped"] += 1
+                        continue
 
-                logger.info("Summarizing OpenAI: %s", article.title[:50])
-                digest_result = agent.summarize_article(
-                    title=article.title,
-                    markdown=article.markdown,
-                    description=article.description,
-                )
-                repo.add_digest_item(
-                    source_type="openai",
-                    source_id=article.id,
-                    url=article.url,
-                    title=article.title,
-                    summary=digest_result.summary,
-                    key_topics=digest_result.key_topics,
-                    content_category=digest_result.content_type,
-                    published_at=article.published_at,
-                )
-                result["success"] += 1
-            except Exception as e:
-                logger.error("Failed to process OpenAI article %s: %s", article.url, e)
-                result["failed"] += 1
-
-        # Process Anthropic articles
-        for article in articles["anthropic"]:
-            result["processed"] += 1
-            try:
-                # Skip if no markdown and no description
-                if not article.markdown and not article.description:
                     logger.info(
-                        "Skipping Anthropic article %s (no content)", article.url
+                        "Summarizing %s: %s",
+                        source_type.capitalize(),
+                        article.title[:50],
                     )
-                    result["skipped"] += 1
-                    continue
+                    digest_result = agent.summarize_article(
+                        title=article.title,
+                        markdown=article.markdown,
+                        description=article.description,
+                    )
+                    repo.add_digest_item(
+                        source_type=source_type,
+                        source_id=article.id,
+                        url=article.url,
+                        title=article.title,
+                        summary=digest_result.summary,
+                        key_topics=digest_result.key_topics,
+                        content_category=digest_result.content_type,
+                        published_at=article.published_at,
+                    )
+                    result["success"] += 1
+                except Exception as e:
+                    logger.error(
+                        "Failed to process %s article %s: %s",
+                        source_type.capitalize(),
+                        article.url,
+                        e,
+                    )
+                    result["failed"] += 1
 
-                logger.info("Summarizing Anthropic: %s", article.title[:50])
-                digest_result = agent.summarize_article(
-                    title=article.title,
-                    markdown=article.markdown,
-                    description=article.description,
-                )
-                repo.add_digest_item(
-                    source_type="anthropic",
-                    source_id=article.id,
-                    url=article.url,
-                    title=article.title,
-                    summary=digest_result.summary,
-                    key_topics=digest_result.key_topics,
-                    content_category=digest_result.content_type,
-                    published_at=article.published_at,
-                )
-                result["success"] += 1
-            except Exception as e:
-                logger.error(
-                    "Failed to process Anthropic article %s: %s", article.url, e
-                )
-                result["failed"] += 1
+        process_articles(articles["openai"], "openai")
+        process_articles(articles["anthropic"], "anthropic")
 
         logger.info(
             "Digest processing complete: %d processed, %d success, %d failed, %d skipped",
